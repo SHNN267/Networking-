@@ -1,0 +1,3 @@
+sc create MyDriver type= kernel binPath="C:\Drivers\MyDriver1.sys"
+sc start MyDriver
+bcdedit /set testsigning on
