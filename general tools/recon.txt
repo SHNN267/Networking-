@@ -1,0 +1,37 @@
+#!/bin/bash
+
+echo "==== OSEP Recon Script ===="
+read -p "Enter target domain: " domain
+
+mkdir -p recon_$domain
+cd recon_$domain
+
+echo "[+] DNS Lookup..."
+host $domain | tee dns.txt
+
+echo "[+] Getting IPs..."
+host $domain | grep "has address" | awk '{print $4}' > ips.txt
+
+echo "[+] Whois Netblocks..."
+for ip in $(cat ips.txt); do
+    echo "---- $ip ----" >> whois.txt
+    whois $ip | grep -E "NetRange|CIDR|OrgName" >> whois.txt
+done
+
+echo "[+] ASN Lookup..."
+for ip in $(cat ips.txt); do
+    whois -h whois.cymru.com " -v $ip" >> asn.txt
+done
+
+echo "[+] Extract ASN..."
+cat asn.txt | awk '{print $1}' | grep -E '^[0-9]' | sort -u > asn_only.txt
+
+echo "[+] Getting BGP Prefixes..."
+for asn in $(cat asn_only.txt); do
+    echo "ASN $asn" >> prefixes.txt
+    curl -s https://api.bgpview.io/asn/$asn/prefixes | \
+    grep -oE '"prefix":"[^"]+"' | cut -d'"' -f4 >> prefixes.txt
+done
+
+echo "[+] Targets Ready in prefixes.txt"
+echo "==== Done ===="
