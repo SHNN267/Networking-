@@ -1,0 +1,115 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <TinyGPS++.h>
+
+// ================= WIFI =================
+const char* ssid = "Fuga";
+const char* password = "Fl@mengo123!";
+
+// ================= API =================
+const char* serverUrl = "https://obada2.pythonanywhere.com/api/v1/tracking/ingest/";
+
+// ================= GPS =================
+TinyGPSPlus gps;
+HardwareSerial GPSserial(2);
+
+// ================= TIMER =================
+unsigned long lastSendTime = 0;
+const long interval = 10000; // 10 seconds
+
+void setup() {
+
+  Serial.begin(115200);
+
+  // GPS UART2 (RX=16, TX=17)
+  GPSserial.begin(9600, SERIAL_8N1, 16, 17);
+
+  Serial.println("Connecting to WiFi...");
+
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi Connected");
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+
+  // قراءة بيانات GPS باستمرار
+  while (GPSserial.available() > 0) {
+    gps.encode(GPSserial.read());
+  }
+
+  // إرسال كل 10 ثواني
+  if (millis() - lastSendTime >= interval) {
+
+    lastSendTime = millis();
+
+    // تأكد أن GPS صالح
+    if (gps.location.isValid()) {
+
+      float latitude = gps.location.lat();
+      float longitude = gps.location.lng();
+
+      Serial.println("========== GPS ==========");
+      Serial.print("Latitude : ");
+      Serial.println(latitude, 6);
+
+      Serial.print("Longitude: ");
+      Serial.println(longitude, 6);
+
+      if (WiFi.status() == WL_CONNECTED) {
+
+        HTTPClient http;
+        http.begin(serverUrl);
+
+        // Headers
+        http.addHeader("Content-Type", "application/json");
+        http.addHeader("Accept", "*/*");
+        http.addHeader("User-Agent", "ESP32");
+        http.addHeader("X-Tracking-Api-Key", "change-this-secret-key");
+
+        // JSON DATA
+        String jsonData = "{";
+        jsonData += "\"latitude\":" + String(latitude, 6) + ",";
+        jsonData += "\"longitude\":" + String(longitude, 6) + ",";
+        jsonData += "\"Type\":\"Garden\",";
+        jsonData += "\"Id\":\"1\",";
+        jsonData += "\"Time\":\"08:00\",";
+        jsonData += "\"route_number\":\"5\",";
+        jsonData += "\"speed\":" + String(gps.speed.kmph()) + ",";
+        jsonData += "\"heading\":" + String(gps.course.deg());
+        jsonData += "}";
+
+        Serial.println("Sending JSON:");
+        Serial.println(jsonData);
+
+        int httpResponseCode = http.POST(jsonData);
+
+        Serial.print("HTTP Response Code: ");
+        Serial.println(httpResponseCode);
+
+        String response = http.getString();
+
+        Serial.println("Server Response:");
+        Serial.println(response);
+
+        http.end();
+      }
+      else {
+        Serial.println("WiFi Disconnected!");
+      }
+
+      Serial.println("=========================\n");
+
+    }
+    else {
+      Serial.println("GPS not valid yet...");
+    }
+  }
+}
